@@ -25,6 +25,8 @@ jobs:
           Invoke-WebRequest $url -OutFile jre.zip
           Expand-Archive jre.zip -DestinationPath dist
           Remove-Item jre.zip
+          $jdk = Get-ChildItem dist -Directory | Where-Object { $_.Name -like "jdk-*" } | Select-Object -First 1
+          if ($jdk) { Rename-Item $jdk.FullName "jre" }
       - name: Pack zip
         shell: pwsh
         run: Compress-Archive -Path dist\MC-Fuwuqi.exe, dist\jre -DestinationPath MC-Fuwuqi-offline.zip
