@@ -32,6 +32,59 @@ max-tick-time=-1
 """
 
 
+JRE_DIR = os.path.join(HOME, "jre")
+
+
+def find_java():
+    # 1) exe 旁边的 jre/（离线内置包）
+    base = os.path.dirname(os.path.abspath(sys.executable if getattr(sys, "frozen", False) else __file__))
+    for root, _, files in os.walk(os.path.join(base, "jre")):
+        if "java.exe" in files:
+            return os.path.join(root, "java.exe")
+    # 2) ~/MCFuwuqi/jre（此前自动下载过）
+    if os.path.isdir(JRE_DIR):
+        for root, _, files in os.walk(JRE_DIR):
+            if "java.exe" in files:
+                return os.path.join(root, "java.exe")
+    # 3) 系统 PATH
+    return shutil.which("java")
+
+
+def jre_url():
+    u = "https://api.adoptium.net/v3/assets/latest/21/hotspot?os=windows&architecture=x64&image_type=jre"
+    req = urllib.request.Request(u, headers={"User-Agent": "MC-Fuwuqi"})
+    with urllib.request.urlopen(req, timeout=30) as r:
+        assets = json.load(r)
+    return assets[0]["binary"]["package"]["link"]
+
+
+def download_jre(progress=lambda s: None):
+    if os.path.isdir(JRE_DIR):
+        j = find_java()
+        if j: return j
+    progress("下载内置 JRE（约 45MB，一次即可）…")
+    zpath = os.path.join(HOME, "jre.zip")
+    req = urllib.request.Request(jre_url(), headers={"User-Agent": "MC-Fuwuqi"})
+    with urllib.request.urlopen(req, timeout=60) as r, open(zpath, "wb") as f:
+        total = int(r.headers.get("Content-Length", 0)); done = 0
+        while True:
+            chunk = r.read(65536)
+            if not chunk: break
+            f.write(chunk); done += len(chunk)
+            if total: progress(f"下载内置 JRE… {done*100//total}%")
+    progress("解压 JRE…")
+    import zipfile
+    with zipfile.ZipFile(zpath) as z: z.extractall(HOME)
+    os.remove(zpath)
+    for d in os.listdir(HOME):
+        src = os.path.join(HOME, d)
+        if d.startswith("jdk-") and d.endswith("jre") and os.path.isdir(src):
+            if not os.path.isdir(JRE_DIR): os.rename(src, JRE_DIR)
+            else: shutil.rmtree(src, ignore_errors=True)
+            break
+    return find_java()
+
+
 def http_json(url):
     req = urllib.request.Request(url, headers={"User-Agent": "MCFuwuqi/1.0"})
     with urllib.request.urlopen(req, timeout=20) as r:
@@ -202,9 +255,23 @@ class App(tk.Tk):
         if not os.path.isfile(jar):
             messagebox.showwarning("提示", "server.jar 还没下载好"); return
         mem = cfg["mem"] if cfg else 2048
-        java = shutil.which("java")
+        java = find_java()
         if not java:
-            messagebox.showerror("错误", "未找到 java，请先安装 Java 17+（https://adoptium.net）"); return
+            self.log("· 首次运行：自动下载内置 JRE（约 45MB）…")
+            def dl():
+                try:
+                    j = download_jre(progress=lambda s2: self.after(0, lambda: self.status.config(text=s2)))
+                    self.after(0, lambda: self.start_server_with(n, j))
+                except Exception as e:
+                    self.after(0, lambda: self.log("JRE 下载失败: " + str(e)))
+            threading.Thread(target=dl, daemon=True).start()
+            return
+        self.start_server_with(n, java)
+
+    def start_server_with(self, n, java):
+        cfg = next((s for s in self.servers if s["name"] == n), None)
+        d = self.server_dir(n)
+        mem = cfg["mem"] if cfg else 2048
         self.log(f"· 启动 {n}（{mem}MB）…")
         self.proc = subprocess.Popen([java, f"-Xms{mem}M", f"-Xmx{mem}M", "-Dfile.encoding=UTF-8",
                                       "-jar", "server.jar", "nogui"], cwd=d,

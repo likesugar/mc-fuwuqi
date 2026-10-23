@@ -3,7 +3,7 @@
 手机版 MC开服 的电脑版：一键下载 Paper/Purpur 核心 → 创建/配置/运行 Minecraft 服务器。
 
 ## 下载
-Releases → `MC-Fuwuqi.exe`（免安装，双击运行）
+Releases → `MC-Fuwuqi-offline.zip`（含内置 JRE，解压后双击 MC-Fuwuqi.exe，无需安装 Java）
 
 ## 使用
 1. ＋ 新建服务器 → 选核心和版本 → 创建（自动下载核心）

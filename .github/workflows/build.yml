@@ -17,12 +17,25 @@ jobs:
         run: |
           pip install pyinstaller
           pyinstaller --onefile --windowed --name "MC-Fuwuqi" main.py
+      - name: Bundle offline JRE
+        shell: pwsh
+        run: |
+          $resp = Invoke-RestMethod "https://api.adoptium.net/v3/assets/latest/21/hotspot?os=windows&architecture=x64&image_type=jre"
+          $url = $resp[0].binary.package.link
+          Invoke-WebRequest $url -OutFile jre.zip
+          Expand-Archive jre.zip -DestinationPath dist
+          Remove-Item jre.zip
+      - name: Pack zip
+        shell: pwsh
+        run: Compress-Archive -Path dist\MC-Fuwuqi.exe, dist\jre -DestinationPath MC-Fuwuqi-offline.zip
       - name: Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v1.0
           name: "MC开服 PC v1.0"
-          files: dist/MC-Fuwuqi.exe
+          files: |
+            MC-Fuwuqi-offline.zip
+            dist/MC-Fuwuqi.exe
           overwrite_files: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
