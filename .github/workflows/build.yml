@@ -1,0 +1,28 @@
+name: build-exe
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Build exe
+        run: |
+          pip install pyinstaller
+          pyinstaller --onefile --windowed --name "MC-Fuwuqi" main.py
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0
+          name: "MC开服 PC v1.0"
+          files: dist/MC-Fuwuqi.exe
+          overwrite_files: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
