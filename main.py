@@ -10,7 +10,8 @@ from tkinter import ttk, messagebox
 HOME = os.path.join(os.path.expanduser("~"), "MCFuwuqi")
 CFG = os.path.join(HOME, "servers.json")
 
-CORES = {"Paper": "https://api.papermc.io/v2/projects/paper/versions/{v}/builds",
+CORES = {"Vanilla": "纯净官方核心",
+         "Paper": "https://api.papermc.io/v2/projects/paper/versions/{v}/builds",
          "Purpur": "https://api.purpurmc.org/v2/purpur/{v}"}
 MC_VERSIONS = ["1.21.4", "1.21.1", "1.20.6", "1.20.4", "1.20.2", "1.19.4", "1.18.2", "1.17.1", "1.16.5", "1.12.2", "1.8.8"]
 
@@ -228,7 +229,10 @@ class App(tk.Tk):
         d = self.server_dir(name)
         self.log(f"· 下载 {core} {ver} …")
         try:
-            if core == "Paper":
+            if core == "Vanilla":
+                manifest = http_json("https://piston-meta.mojang.com/mc/game/version_manifest_v2.json")
+                vurl = next(v["url"] for v in manifest["versions"] if v["id"] == ver)
+                url = http_json(vurl)["downloads"]["server"]["url"]
                 builds = http_json(CORES["Paper"].format(v=ver))["builds"]
                 b = builds[-1]["build"]
                 jn = http_json(f"https://api.papermc.io/v2/projects/paper/versions/{ver}/builds/{b}")["downloads"]["application"]["name"]
