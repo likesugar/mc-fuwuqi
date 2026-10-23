@@ -233,6 +233,7 @@ class App(tk.Tk):
                 manifest = http_json("https://piston-meta.mojang.com/mc/game/version_manifest_v2.json")
                 vurl = next(v["url"] for v in manifest["versions"] if v["id"] == ver)
                 url = http_json(vurl)["downloads"]["server"]["url"]
+            elif core == "Paper":
                 builds = http_json(CORES["Paper"].format(v=ver))["builds"]
                 b = builds[-1]["build"]
                 jn = http_json(f"https://api.papermc.io/v2/projects/paper/versions/{ver}/builds/{b}")["downloads"]["application"]["name"]
